@@ -16,78 +16,10 @@ A harness is everything around the model that makes it useful and safe at work. 
 
 ## Architecture
 
-```mermaid
-flowchart LR
-    user(["Employee<br/>sales / support / finance"])
+![Sachin Tech Assist architecture](docs/architecture.png)
 
-    subgraph clients["Interfaces"]
-        ui["Web UI<br/>web/ (HTML + JS)"]
-        cli["CLI<br/>cli.py"]
-    end
-
-    subgraph container["Docker container: sachin-tech-assist"]
-        server["server.py<br/>HTTP API, task runner,<br/>activity events"]
-
-        subgraph harness["Deep Agent harness (agent.py / stages.py)"]
-            direction TB
-            loop["Agent loop<br/>OpenAI chat model"]
-
-            subgraph ctx["Context"]
-                memory["company/AGENTS.md<br/>(always loaded)"]
-                skills["skills/*/SKILL.md<br/>(loaded on demand)"]
-            end
-
-            subgraph act["Actions"]
-                tools["Company tools<br/>tools/*.py"]
-                todos["Planning<br/>write_todos"]
-                reviewer["Subagent<br/>quote-reviewer"]
-            end
-
-            subgraph bnd["Boundaries"]
-                rbac["Role binding<br/>company.py ACCESS"]
-                hitl["Human approval<br/>send_quote / issue_refund"]
-                limits["Model-call limits +<br/>write-protected /company, /skills"]
-            end
-
-            subgraph per["Persistence"]
-                files["Working files<br/>/work/"]
-                ckpt["SQLite checkpoints"]
-                summ["Context summarization"]
-            end
-        end
-
-        subgraph data[".runtime/ (volume: sachin-tech-runtime)"]
-            db[("company.sqlite<br/>customers, tickets, invoices,<br/>revenue, outbox, ledger")]
-            cpdb[("checkpoints + task DB")]
-            ws[("per-task workspaces")]
-        end
-    end
-
-    openai(["OpenAI API"])
-
-    user --> ui & cli
-    ui -- "REST /api/*" --> server
-    server --> loop
-    cli --> loop
-    loop <--> ctx
-    loop --> act
-    act --> bnd
-    rbac --> db
-    reviewer --> tools
-    hitl -. "pause / resume" .-> server
-    files --> ws
-    ckpt --> cpdb
-    loop -- "HTTPS (via proxy)" --> openai
-
-    classDef context fill:#dbe7fb,stroke:#2f6fde,color:#1d2330
-    classDef actions fill:#dcf3e5,stroke:#1f9d55,color:#1d2330
-    classDef boundaries fill:#fde3de,stroke:#e5654f,color:#1d2330
-    classDef persistence fill:#ebe2f8,stroke:#8256d0,color:#1d2330
-    class memory,skills context
-    class tools,todos,reviewer actions
-    class rbac,hitl,limits boundaries
-    class files,ckpt,summ persistence
-```
+The source is [docs/architecture.drawio](docs/architecture.drawio). Open it in [draw.io](https://app.diagrams.net) or with the VS Code
+*Draw.io Integration* extension. The PNG also has the diagram embedded, so you can open the PNG in draw.io and edit it directly.
 
 ### Request flow with human approval
 
@@ -141,6 +73,7 @@ ai-agent-harness-poc/
 ├── cli.py            # Command-line runner (preview, one-shot, interactive, approvals)
 ├── server.py         # Local web chat server
 ├── web/              # Chat UI (index.html, app.js, style.css)
+├── docs/             # Architecture diagram (draw.io source + PNG)
 ├── Dockerfile        # Container image (python:3.12-slim, non-root)
 └── docker-compose.yml# One-command up/down with a persistent volume
 ```
