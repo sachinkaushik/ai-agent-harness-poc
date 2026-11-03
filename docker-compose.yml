@@ -1,0 +1,25 @@
+# Start:  docker compose up -d --build     → http://127.0.0.1:8502
+# Stop:   docker compose down              (add -v to also wipe tasks, checkpoints and dummy DB)
+name: ai-agent-harness-poc
+
+services:
+  sachin-tech-assist:
+    build: .
+    image: ai-agent-harness-poc:latest
+    container_name: sachin-tech-assist
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      HARNESS_HOST: 0.0.0.0
+      HARNESS_PORT: ${HARNESS_PORT:-8502}
+      HARNESS_STAGE: ${HARNESS_STAGE:-persistence}
+    ports:
+      # Published on host localhost only; the server also rejects non-localhost POST origins.
+      - "127.0.0.1:${HARNESS_PORT:-8502}:${HARNESS_PORT:-8502}"
+    volumes:
+      - sachin-tech-runtime:/app/.runtime
+    restart: unless-stopped
+
+volumes:
+  sachin-tech-runtime:

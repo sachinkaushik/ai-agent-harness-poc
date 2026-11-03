@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sachin Tech Assist · AI Agent Harness POC</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand">◐ Sachin Tech Assist<small>AI agent harness POC</small></div>
+    <label class="field">Employee role
+      <select id="role"></select>
+    </label>
+    <div id="access" class="access"></div>
+    <div class="stage"><span id="stage"></span><p id="stage-note"></p></div>
+    <button id="new-task" class="primary">+ New task</button>
+    <h3>Tasks</h3>
+    <ul id="tasks" class="tasks"></ul>
+    <div class="legend">
+      <span class="pill context">Context</span><span class="pill actions">Actions</span>
+      <span class="pill boundaries">Boundaries</span><span class="pill persistence">Persistence</span>
+    </div>
+  </aside>
+
+  <main class="chat">
+    <header><h2 id="title">New task</h2><span id="status" class="status"></span><span id="model" class="model"></span></header>
+    <div id="feed" class="feed"></div>
+    <div id="starters" class="starters"></div>
+    <div id="approval" class="approval hidden"></div>
+    <form id="composer" class="composer">
+      <textarea id="prompt" rows="3" placeholder="Ask Sachin Tech Assist… (Ctrl+Enter to send)"></textarea>
+      <div class="composer-actions">
+        <button type="button" id="resume" class="hidden">Resume</button>
+        <button type="button" id="delete" class="danger hidden">Delete task</button>
+        <button type="submit" class="primary">Send</button>
+      </div>
+    </form>
+  </main>
+
+  <aside class="panel">
+    <section><h3><span class="dot actions"></span>Plan</h3><ul id="todos" class="todos"><li class="muted">No plan yet.</li></ul></section>
+    <section><h3><span class="dot persistence"></span>Working files</h3><div id="files"><p class="muted">No saved files.</p></div></section>
+    <section><h3><span class="dot boundaries"></span>Approved actions (local only)</h3><div id="records"></div></section>
+  </aside>
+  <script src="/app.js"></script>
+</body>
+</html>
