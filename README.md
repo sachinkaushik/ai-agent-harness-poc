@@ -14,6 +14,118 @@ A harness is everything around the model that makes it useful and safe at work. 
 | **Boundaries** | Who may do what, and what needs a human? | `company.py` (`ACCESS`), `tools/binding.py`, `agent.py` (protected files, approvals, call limits) |
 | **Persistence** | What survives a reply or a restart? | `workspace.py` (`/work/` files), SQLite checkpoints, context summarization in `agent.py` |
 
+## Architecture
+
+```mermaid
+flowchart LR
+    user(["Employee<br/>sales / support / finance"])
+
+    subgraph clients["Interfaces"]
+        ui["Web UI<br/>web/ (HTML + JS)"]
+        cli["CLI<br/>cli.py"]
+    end
+
+    subgraph container["Docker container: sachin-tech-assist"]
+        server["server.py<br/>HTTP API, task runner,<br/>activity events"]
+
+        subgraph harness["Deep Agent harness (agent.py / stages.py)"]
+            direction TB
+            loop["Agent loop<br/>OpenAI chat model"]
+
+            subgraph ctx["Context"]
+                memory["company/AGENTS.md<br/>(always loaded)"]
+                skills["skills/*/SKILL.md<br/>(loaded on demand)"]
+            end
+
+            subgraph act["Actions"]
+                tools["Company tools<br/>tools/*.py"]
+                todos["Planning<br/>write_todos"]
+                reviewer["Subagent<br/>quote-reviewer"]
+            end
+
+            subgraph bnd["Boundaries"]
+                rbac["Role binding<br/>company.py ACCESS"]
+                hitl["Human approval<br/>send_quote / issue_refund"]
+                limits["Model-call limits +<br/>write-protected /company, /skills"]
+            end
+
+            subgraph per["Persistence"]
+                files["Working files<br/>/work/"]
+                ckpt["SQLite checkpoints"]
+                summ["Context summarization"]
+            end
+        end
+
+        subgraph data[".runtime/ (volume: sachin-tech-runtime)"]
+            db[("company.sqlite<br/>customers, tickets, invoices,<br/>revenue, outbox, ledger")]
+            cpdb[("checkpoints + task DB")]
+            ws[("per-task workspaces")]
+        end
+    end
+
+    openai(["OpenAI API"])
+
+    user --> ui & cli
+    ui -- "REST /api/*" --> server
+    server --> loop
+    cli --> loop
+    loop <--> ctx
+    loop --> act
+    act --> bnd
+    rbac --> db
+    reviewer --> tools
+    hitl -. "pause / resume" .-> server
+    files --> ws
+    ckpt --> cpdb
+    loop -- "HTTPS (via proxy)" --> openai
+
+    classDef context fill:#dbe7fb,stroke:#2f6fde,color:#1d2330
+    classDef actions fill:#dcf3e5,stroke:#1f9d55,color:#1d2330
+    classDef boundaries fill:#fde3de,stroke:#e5654f,color:#1d2330
+    classDef persistence fill:#ebe2f8,stroke:#8256d0,color:#1d2330
+    class memory,skills context
+    class tools,todos,reviewer actions
+    class rbac,hitl,limits boundaries
+    class files,ckpt,summ persistence
+```
+
+### Request flow with human approval
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor E as Employee (sales)
+    participant UI as Web UI
+    participant S as server.py
+    participant A as Deep Agent
+    participant T as Company tools
+    participant DB as company.sqlite
+
+    E->>UI: "Send the Acme quote"
+    UI->>S: POST /api/tasks {role, prompt}
+    S->>A: stream(prompt, thread_id = task)
+    A->>A: read_file /skills/company/write-quote/SKILL.md
+    A->>T: customer_lookup("Acme")
+    T->>DB: read-only query (role checked)
+    DB-->>T: C-201 Acme Logistics
+    T-->>A: record
+    A->>S: tool call send_quote → interrupt
+    S-->>UI: status needs_review + action details
+    E->>UI: Approve / Reject
+    UI->>S: POST /api/tasks/{id}/review
+    S->>A: Command(resume = decision)
+    alt approved
+        A->>T: send_quote(...)
+        T->>DB: insert into quote_outbox (local only)
+    else rejected
+        A-->>S: skip action, explain
+    end
+    A-->>S: final answer (checkpoint saved)
+    S-->>UI: activity feed + reply
+```
+
+Each tool call in the UI's activity feed is a real event from the agent run. Events are color-coded by pillar: blue for Context, green for Actions, coral for Boundaries, and purple for Persistence.
+
 ## Project layout
 
 ```
